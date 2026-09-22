@@ -61,7 +61,7 @@ CCTV를 주기적으로 캡처해 구역별 혼잡도를 산출하고, 수치와
 
 - 경량 계열 (YOLO nano/small 급)
 - COCO 사전학습은 person만 있어 머리 검출 부적합 → 파인튜닝 필요
-- 데이터 후보: CrowdHuman(head), SCUT-HEAD, 현장 샘플 자체 라벨링
+- 데이터 선정: CrowdHuman, SCUT-HEAD, 현장 샘플 자체 라벨링
 - 최적화: ONNX 변환, 양자화, 배치 추론
 
 ## 구역 설계
