@@ -1,0 +1,40 @@
+# 서비스 설정. (잠정) 값의 근거는 spec.md 참고.
+
+cycle_seconds: 30            # 측정 주기 (확정)
+queue_size: 4                # 단계 간 큐 크기. 가득 차면 가장 오래된 주기를 버림 (spec 6)
+
+capture:                     # spec 5.1
+  frames: 5                  # 주기당 샘플 수 (확정)
+  window_seconds: 3.0        # 샘플링 구간 (확정)
+  min_frames: 3              # 이보다 적으면 주기를 error 처리
+  reconnect_max_backoff: 30  # 재연결 최대 대기(초)
+
+detector:                    # spec 5.2
+  model: models/yolo26s-ywhob.onnx
+  imgsz: 1280
+  person_conf: 0.35          # (잠정)
+  head_conf: 0.30            # (잠정)
+  max_det: 1000
+  device: null               # null이면 자동 선택. 예: 0 (GPU), cpu
+
+aggregate:                   # spec 5.4 ~ 5.6
+  confidence:
+    high:   {abs: 2, rel: 0.2}    # (max - min) <= max(abs, rel * median)
+    medium: {abs: 4, rel: 0.5}
+  ema_alpha: 0.4             # (잠정)
+  up:   [0.45, 0.75]         # 0→1, 1→2 상승 임계값 (잠정)
+  down: [0.35, 0.65]         # 1→0, 2→1 하강 임계값 (잠정)
+  confirm_cycles: 2          # 단계 변경 확인 주기 수 (잠정)
+
+blur:                        # spec 5.7
+  downscale: 8               # 긴 변 기준 1/8 축소 (잠정)
+  sigma: 1.5                 # 축소 이미지에 적용하는 가우시안 sigma
+  output_long_side: 960      # 전송 이미지 긴 변(px)
+  sharpness_max: 30.0        # 라플라시안 분산이 이보다 크면 블러 실패로 판정 (잠정, 실측 필요)
+  jpeg_quality: 80
+
+redis:                       # spec 5.8, 9
+  url: redis://localhost:6379/0
+  key_prefix: ywhob
+  image_ttl: 120
+  image_url_base: /snapshots

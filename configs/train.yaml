@@ -1,0 +1,20 @@
+# 학습 하이퍼파라미터 (spec 3.5). 모두 (잠정).
+
+model: yolo26s.pt
+data: configs/data.yaml
+imgsz: 1280          # 960과 비교 실험
+epochs: 100
+patience: 20
+batch: -1            # 자동 (GPU 메모리 60%). RTX 2070 8GB에서 1280은 작게 잡힐 수 있음
+optimizer: auto
+max_det: 1000
+
+# 증강
+mosaic: 1.0
+scale: 0.5
+fliplr: 0.5
+flipud: 0.0          # CCTV 시점 고정이라 상하 반전 금지
+hsv_v: 0.4           # 실내 조명 변화
+
+project: runs
+name: yolo26s-ywhob
