@@ -113,12 +113,13 @@ SCUT-HEAD(머리 라벨만 있음)는 머리 클래스와 함께 보류한다.
 model: yolo26s.pt
 data: configs/data.yaml
 imgsz: 1280          # 원거리 소형 객체 대응. 960과 비교 실험
-epochs: 100
-batch: auto
-patience: 20
+epochs: 50           # 1 에폭 약 13분 (RTX 4070, batch 8) → 최대 약 11시간
+batch: 8             # 자동(-1)은 메모리 측정 중 CUDA OOM으로 실패
+patience: 10         # 얼리 스톱: val mAP50-95가 10 에폭 동안 안 오르면 중단
 optimizer: auto
 augment:
   mosaic: 1.0
+  close_mosaic: 10   # 마지막 10 에폭은 모자이크 끔
   scale: 0.5
   fliplr: 0.5
   flipud: 0.0        # 상하 반전 금지 (CCTV 시점 고정)
@@ -127,6 +128,9 @@ augment:
 
 - 실험은 `imgsz`(960/1280) 비교로 진행한다.
 - 실험 결과는 `runs/` 아래에 두고, 선정 모델은 `models/`에 버전을 붙여 보관한다.
+- **과적합 방지**: 매 에폭 CrowdHuman val(학습에 안 씀)로 평가해 mAP50-95가 가장 높은 에폭을 `best.pt`로 남기고, 얼리 스톱으로 개선이 멈추면 학습을 끝낸다. 채택하는 모델은 항상 `best.pt`다.
+- 실행: `uv run python scripts/train.py`. 에폭마다 진행률, 학습률, 검증 지표, 얼리 스톱 카운터를 현황판으로 출력한다.
+- **중단 후 재개**: 에폭마다 `last.pt`(옵티마이저 포함)와 백업 `last_backup.pt`를 저장한다. 같은 명령을 다시 실행하면 끝나지 않은 학습을 찾아 다음 에폭부터 이어간다. `last.pt`가 저장 중 깨졌으면 백업으로 이어간다 (최대 1 에폭 손실). 새로 시작하려면 `--new`.
 
 ### 3.6 평가 지표
 
