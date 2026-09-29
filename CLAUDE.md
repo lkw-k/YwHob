@@ -30,7 +30,7 @@ uv run ywhob                        # 서비스 실행 (configs/cameras.yaml 필
 ## 구조
 
 ```
-ywhob/      capture → detect → matching → aggregate → blur → publish, pipeline.py가 연결
+ywhob/      capture → detect → aggregate → blur → publish, pipeline.py가 연결 (matching.py는 보류)
 configs/    service.yaml(주기, 임계값, Redis), cameras.example.yaml(카메라, ROI), data.yaml, train.yaml
 scripts/    데이터 변환, 학습, 평가, export, 벤치마크, ROI 편집 (spec 3~4, 7)
 models/     가중치 (git 제외, README.md에 버전 기록)
@@ -41,7 +41,7 @@ tests/
 
 - **원본 프레임은 디스크, 로그, 네트워크 어디에도 남기지 않는다.** 디버그용 원본 저장 옵션도 만들지 않는다. 블러 실패 시 이미지는 보내지 않는다.
 - 임계값, 비율, 주기 같은 튜닝 값은 `configs/`에 두고 코드에 하드코딩하지 않는다.
-- 모델 클래스는 `0: person`, `1: head`. COCO 가중치를 그대로 쓰면 1번이 bicycle이라 머리로 오인된다.
+- 모델 클래스는 `0: person` 하나다 (`head`는 보류, spec 3.2). COCO 가중치를 그대로 쓸 때는 `classes=[0]`으로 person만 남긴다.
 - YOLO26은 end-to-end(NMS 없음) 모델이다. ONNX/TensorRT로 export할 때 `max_det`이 그래프에 고정되므로 `max_det=1000`을 넘긴다 (기본 300이면 혼잡 장면에서 인원이 잘림).
 - `configs/cameras.yaml`은 RTSP 계정이 들어가므로 git에 올리지 않는다 (.gitignore 처리됨).
 - 새 로직에는 테스트를 같이 추가한다. 카메라/Redis/모델 없이 돌 수 있게 가짜 객체를 쓴다.

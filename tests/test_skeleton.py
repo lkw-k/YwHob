@@ -31,7 +31,6 @@ def test_service_yaml_matches_spec():
 def test_cameras_example_loads():
     cams = load_cameras(CAMERAS)
     assert [z.zone_id for z in cams[0].zones] == ["hall_a_front", "hall_a_back"]
-    assert cams[0].matching.top_ratio == 0.4
 
 
 def test_hysteresis_must_have_gap(tmp_path):

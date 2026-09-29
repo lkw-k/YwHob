@@ -13,7 +13,6 @@ detector:                    # spec 5.2
   model: models/yolo26s-ywhob.onnx
   imgsz: 1280
   person_conf: 0.35          # (잠정)
-  head_conf: 0.30            # (잠정)
   max_det: 1000
   device: null               # null이면 자동 선택. 예: 0 (GPU), cpu
 

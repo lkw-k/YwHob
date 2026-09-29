@@ -48,5 +48,5 @@ class Pipeline:
         raise NotImplementedError
 
     def postprocess(self, item: DetectItem) -> None:
-        """사람 확정 → 구역 집계 → 판정 → 블러 → 전송."""
+        """구역 집계 → 판정 → 블러 → 전송."""
         raise NotImplementedError
