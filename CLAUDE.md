@@ -15,7 +15,7 @@ YwHob: 박람회 CCTV를 30초마다 캡처해 구역별 혼잡도(3단계 + 연
 
 ## 환경
 
-- Python 3.11, uv로 관리. torch는 CUDA 12.6 빌드 (개발 PC: RTX 2070 8GB)
+- Python 3.11, uv로 관리. torch는 CUDA 12.6 빌드 (개발 PC: RTX 4070 12GB)
 - 이 PC에는 `python` 명령이 없다 (Windows Store 별칭만 있음). 항상 `uv run` 또는 `.venv/Scripts/python` 사용
 
 ```bash

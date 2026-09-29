@@ -41,7 +41,7 @@ uv run python scripts/benchmark.py            # 5장 배치 시간, 디코딩 �
 - 모델 채택 기준은 mAP가 아니라 **인원 MAPE**다 (목표 20% 이하, 잠정).
 - 양자화 후 MAPE가 FP32 대비 +2%p를 넘게 나빠지면 FP16/FP32를 쓴다.
 - 채택한 모델은 `models/yolo26s-ywhob-v{N}.onnx`로 두고 `models/README.md` 표에 지표를 기록한다.
-- RTX 2070(8GB)에서 imgsz 1280 학습은 batch가 작게 잡힌다. 메모리 부족이면 batch를 직접 낮춘다.
+- RTX 4070(12GB)에서 imgsz 1280 학습은 batch가 작게 잡힌다. 메모리 부족이면 batch를 직접 낮춘다.
 
 ## 3. 임계값과 ROI 조정
 
