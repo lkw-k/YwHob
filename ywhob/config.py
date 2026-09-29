@@ -12,14 +12,6 @@ Polygon = tuple[Point, ...]
 
 
 @dataclass(frozen=True)
-class MatchParams:
-    """사람 확정 규칙 (spec 5.3)."""
-
-    top_ratio: float = 0.4
-    head_width_ratio: tuple[float, float] = (0.15, 0.7)
-
-
-@dataclass(frozen=True)
 class ZoneConfig:
     zone_id: str
     roi: Polygon
@@ -32,7 +24,6 @@ class CameraConfig:
     url: str
     zones: tuple[ZoneConfig, ...]
     mask: tuple[Polygon, ...] = ()
-    matching: MatchParams = field(default_factory=MatchParams)
 
 
 @dataclass(frozen=True)
@@ -48,7 +39,6 @@ class DetectorConfig:
     model: str = "models/yolo26s-ywhob.onnx"
     imgsz: int = 1280
     person_conf: float = 0.35
-    head_conf: float = 0.30
     max_det: int = 1000
     device: str | int | None = None
 
@@ -202,17 +192,8 @@ def load_cameras(path: str | Path) -> list[CameraConfig]:
         if not zones:
             raise ConfigError(f"{where}: 구역이 하나 이상 있어야 함")
 
-        m = c.get("matching") or {}
-        matching = MatchParams(
-            top_ratio=float(m.get("top_ratio", MatchParams.top_ratio)),
-            head_width_ratio=tuple(m.get("head_width_ratio", MatchParams.head_width_ratio)),
-        )
-        lo, hi = matching.head_width_ratio
-        if not (0 < matching.top_ratio <= 1 and 0 < lo < hi):
-            raise ConfigError(f"{where}.matching: 값 범위 오류")
-
         masks = tuple(_polygon(p, f"{where}.mask[{k}]") for k, p in enumerate(c.get("mask") or []))
-        cameras.append(CameraConfig(cam_id, str(c["url"]), tuple(zones), masks, matching))
+        cameras.append(CameraConfig(cam_id, str(c["url"]), tuple(zones), masks))
     if not cameras:
         raise ConfigError(f"{path}: 카메라가 없음")
     return cameras

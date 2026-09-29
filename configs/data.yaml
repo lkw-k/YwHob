@@ -8,4 +8,3 @@ test: images/test
 
 names:
   0: person   # 가려진 부분까지 포함한 전체 박스 (CrowdHuman full box)
-  1: head
