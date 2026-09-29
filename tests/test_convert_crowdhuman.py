@@ -77,6 +77,22 @@ def test_ignored_regions_are_not_labeled_and_filled_gray(tmp_path):
     assert abs(img[50, 70].mean() - BG) < 5  # 아무 박스도 없는 곳은 그대로
 
 
+def test_rerun_with_new_ignore_region_does_not_touch_source_image(tmp_path):
+    """1차 실행에서 하드링크로 둔 이미지를 2차 실행에서 회색 처리해도 원본은 그대로여야 한다."""
+    src = _make_src(tmp_path, [{"ID": "f", "gtboxes": []}])  # 칠할 영역 없음 → 하드링크
+    dst = tmp_path / "out"
+    cc.main(["--src", str(src), "--dst", str(dst), "--splits", "val"])
+
+    rec = {"ID": "f", "gtboxes": [_box("mask", [0, 0, 100, 100], [0, 0, 100, 100], ignore=1)]}
+    (src / "annotation_val.odgt").write_text(json.dumps(rec) + "\n", encoding="utf-8")
+    cc.main(["--src", str(src), "--dst", str(dst), "--splits", "val"])
+
+    original = cv2.imread(str(src / "Images" / "f.jpg")).astype(int)
+    converted = cv2.imread(str(dst / "images" / "val" / "ch_f.jpg")).astype(int)
+    assert abs(original[50, 50].mean() - BG) < 5  # 원본은 그대로
+    assert abs(converted[50, 50].mean() - cc.FILL_VALUE) < 5  # 결과만 회색
+
+
 def test_image_without_people_gets_empty_label(tmp_path):
     dst = _run(tmp_path, [{"ID": "d", "gtboxes": []}])
     assert _labels(dst, "d") == []

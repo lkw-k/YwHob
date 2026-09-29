@@ -117,7 +117,10 @@ def convert_image(ann: ImageAnn, src_img: Path, img_dir: Path, lbl_dir: Path) ->
         _link_or_copy(src_img, dst_img)
     else:
         img[mask] = FILL_VALUE
-        cv2.imwrite(str(dst_img), img, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
+        # 이전 실행이 하드링크를 남겼으면 그대로 쓸 때 원본 CrowdHuman 이미지가 덮어써진다. 먼저 링크를 끊는다
+        dst_img.unlink(missing_ok=True)
+        if not cv2.imwrite(str(dst_img), img, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]):
+            raise OSError(f"이미지를 저장할 수 없음: {dst_img}")
     return len(labels), mask is not None
 
 
