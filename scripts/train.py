@@ -6,8 +6,9 @@
 중단 후 재개:
 - Ultralytics가 에폭마다 weights/last.pt(옵티마이저 포함)를 저장한다. 저장 직후 last_backup.pt로 한 벌 더
   복사한다 (임시 파일에 쓰고 이름을 바꾸므로 복사 중 전원이 꺼져도 이전 백업이 남는다).
-- 다시 실행하면 runs/<name>* 중 끝나지 않은 학습을 찾아 마지막 에폭 다음부터 이어서 학습한다.
-  last.pt가 깨졌으면 last_backup.pt로 이어간다 (최대 1 에폭 손실). 끝난 학습은 건너뛴다.
+- 다시 실행하면 runs/<name>* 중 가장 최근 학습이 끝나지 않았을 때 마지막 에폭 다음부터 이어서 학습한다.
+  last.pt가 깨졌으면 last_backup.pt로 이어간다 (최대 1 에폭 손실). 끝났으면 새로 시작한다.
+- 이어서 할 학습이 있는데 --epochs 등 학습 옵션을 주면, 옵션이 무시되지 않도록 멈추고 안내한다.
 
 사용:
     uv run python scripts/train.py                              # 새 학습, 또는 중단된 학습 이어서
@@ -187,19 +188,30 @@ def _last_saved(run: Path) -> float:
 
 
 def find_resumable(project: Path, name: str, load=_load_ckpt) -> Path | None:
-    """project/name, name2, name3 ... 중 가장 최근에 저장된, 끝나지 않은 학습의 체크포인트 경로."""
+    """project/name, name2, name3 ... 중 가장 최근에 저장된 학습이 끝나지 않았으면 그 체크포인트 경로.
+
+    가장 최근 학습만 본다. --new로 버리고 새로 시작한 예전 학습이 나중에 되살아나지 않게 하기 위해서다.
+    """
     runs = [d for d in project.glob(f"{name}*") if re.fullmatch(re.escape(name) + r"\d*", d.name)]
-    for run in sorted(runs, key=_last_saved, reverse=True):
-        weights = run / "weights"
-        last = _try_load(weights / "last.pt", load)
-        if last is not None:
-            if _resumable(last):
-                return weights / "last.pt"
-            continue  # 정상적으로 읽혔는데 재개 대상이 아니면 끝난 학습
-        backup = _try_load(weights / BACKUP_NAME, load)
-        if backup is not None and _resumable(backup):
-            return weights / BACKUP_NAME
-    return None
+    if not runs:
+        return None
+    weights = max(runs, key=_last_saved) / "weights"
+    last = _try_load(weights / "last.pt", load)
+    if last is not None:
+        return weights / "last.pt" if _resumable(last) else None  # 정상적으로 읽혔는데 재개 대상이 아니면 끝난 학습
+    backup = _try_load(weights / BACKUP_NAME, load)
+    return weights / BACKUP_NAME if backup is not None and _resumable(backup) else None
+
+
+def check_resume_overrides(ckpt: Path | None, overrides: dict) -> None:
+    """재개는 체크포인트의 설정을 그대로 쓴다. 학습 설정 옵션을 줬으면 조용히 무시하지 않고 멈춘다."""
+    given = [f"--{k}" for k in ("epochs", "fraction", "batch", "imgsz") if overrides.get(k) is not None]
+    if ckpt and given:
+        raise SystemExit(
+            f"중단된 학습이 있습니다: {ckpt}\n"
+            f"이어서 하면 {', '.join(given)} 옵션은 적용되지 않습니다. "
+            "이어서 하려면 옵션 없이 실행하고, 옵션대로 새로 시작하려면 --new를 붙이세요."
+        )
 
 
 def train_args(cfg: dict, overrides: dict) -> dict:
@@ -232,6 +244,7 @@ def main(argv: list[str] | None = None) -> None:
     overrides = {k: getattr(args, k) for k in ("epochs", "fraction", "batch", "imgsz", "name")}
     targs = train_args(cfg, overrides)
     ckpt = None if args.new else find_resumable(Path(targs["project"]), targs["name"])
+    check_resume_overrides(ckpt, overrides)
 
     model = YOLO(str(ckpt) if ckpt else cfg["model"])
     Dashboard().register(model)

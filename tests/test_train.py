@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -152,6 +153,20 @@ def test_resume_ignores_other_run_names_and_final_epoch(tmp_path):
     load = _make_runs(tmp_path, {"timing": {"last.pt": RUNNING}, "yolo26s-ywhob": {"last.pt": done}})
     assert tr.find_resumable(tmp_path, "yolo26s-ywhob", load) is None
     assert tr.find_resumable(tmp_path / "nothing", "yolo26s-ywhob", load) is None
+
+
+def test_abandoned_older_run_is_not_resumed_after_newer_run_finishes(tmp_path):
+    # 중단된 ywhob을 --new로 버리고 ywhob2를 끝까지 돌린 뒤 → 새 학습을 시작해야 한다
+    load = _make_runs(tmp_path, {"yolo26s-ywhob": {"last.pt": RUNNING}, "yolo26s-ywhob2": {"last.pt": FINISHED}})
+    assert tr.find_resumable(tmp_path, "yolo26s-ywhob", load) is None
+
+
+def test_resume_refuses_training_options_it_would_ignore():
+    ckpt = Path("runs/yolo26s-ywhob/weights/last.pt")
+    with pytest.raises(SystemExit, match="--epochs, --fraction"):
+        tr.check_resume_overrides(ckpt, {"epochs": 3, "fraction": 0.1, "batch": None, "imgsz": None, "name": None})
+    tr.check_resume_overrides(ckpt, {"epochs": None, "fraction": None, "batch": None, "imgsz": None, "name": "x"})
+    tr.check_resume_overrides(None, {"epochs": 3})  # 재개할 게 없으면 옵션대로 새 학습
 
 
 def test_train_args_drop_model_and_apply_overrides():
