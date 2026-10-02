@@ -65,6 +65,18 @@ def test_unblurred_box_is_rejected(monkeypatch):
     assert privacy_blur(_noise(), BOX, BlurConfig()) is None
 
 
+def test_low_contrast_box_passes_by_absolute_threshold(monkeypatch):
+    # 원래 밋밋한 영역(선명도 약 20)은 비율이 줄지 않아도 sharpness_max 이하라 통과해야 한다
+    monkeypatch.setattr(blur, "_resize_long_side", lambda img, long_side: img)
+    flat = (128 + np.random.default_rng(0).integers(-2, 3, (1080, 1920, 3))).astype(np.uint8)
+    assert privacy_blur(flat, BOX, BlurConfig()) is not None
+
+
+def test_small_frame_is_not_upscaled():
+    out = privacy_blur(_noise(360, 640), np.empty((0, 4)), BlurConfig())
+    assert _decode(out).shape[:2] == (360, 640)
+
+
 def test_input_frame_is_not_modified():
     frame = _noise()
     before = frame.copy()

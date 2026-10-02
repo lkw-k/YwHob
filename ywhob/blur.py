@@ -2,7 +2,7 @@
 
 - 사람 박스를 box_pad만큼 넓혀 긴 변 box_long_side로 축소 → 원래 크기로 확대
 - 박스별 검증: 블러 후 선명도 <= sharpness_max 또는 <= 블러 전 × sharpness_ratio
-- 프레임 전체를 output_long_side로 줄여 JPEG. 실패하면 None (호출 측은 이미지를 보내지 않음)
+- 프레임 긴 변이 output_long_side보다 크면 줄여서 JPEG. 실패하면 None (호출 측은 이미지를 보내지 않음)
 """
 
 from __future__ import annotations
@@ -65,7 +65,8 @@ def privacy_blur(frame: np.ndarray, boxes: np.ndarray, cfg: BlurConfig) -> bytes
                 return None
             img[y0:y1, x0:x1] = blurred
 
-        out = _resize_long_side(img, cfg.output_long_side)
+        # 출력 크기보다 작은 프레임은 확대하지 않는다
+        out = img if max(h, w) <= cfg.output_long_side else _resize_long_side(img, cfg.output_long_side)
         ok, buf = cv2.imencode(".jpg", out, [cv2.IMWRITE_JPEG_QUALITY, cfg.jpeg_quality])
         if not ok:
             log.warning("블러 이미지 JPEG 인코딩 실패")
