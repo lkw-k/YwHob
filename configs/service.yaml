@@ -26,10 +26,11 @@ aggregate:                   # spec 5.4 ~ 5.6
   confirm_cycles: 2          # 단계 변경 확인 주기 수 (잠정)
 
 blur:                        # spec 5.7
-  downscale: 8               # 긴 변 기준 1/8 축소 (잠정)
-  sigma: 1.5                 # 축소 이미지에 적용하는 가우시안 sigma
+  box_pad: 0.1               # 사람 박스를 상하좌우로 넓히는 비율 (잠정)
+  box_long_side: 16          # 박스 영역을 이 긴 변(px)까지 축소 후 확대. 얼굴이 약 2px로 줄어듦 (잠정)
   output_long_side: 960      # 전송 이미지 긴 변(px)
-  sharpness_max: 30.0        # 라플라시안 분산이 이보다 크면 블러 실패로 판정 (잠정, 실측 필요)
+  sharpness_max: 30.0        # 박스 블러 후 라플라시안 분산이 이 값 이하면 통과 (잠정)
+  sharpness_ratio: 0.25      # 또는 블러 전 선명도의 이 비율 이하면 통과 (잠정)
   jpeg_quality: 80
 
 redis:                       # spec 5.8, 9

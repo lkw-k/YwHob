@@ -63,10 +63,11 @@ class AggregateConfig:
 
 @dataclass(frozen=True)
 class BlurConfig:
-    downscale: int = 8
-    sigma: float = 1.5
+    box_pad: float = 0.1
+    box_long_side: int = 16
     output_long_side: int = 960
     sharpness_max: float = 30.0
+    sharpness_ratio: float = 0.25
     jpeg_quality: int = 80
 
 
@@ -162,8 +163,10 @@ def load_service(path: str | Path) -> ServiceConfig:
         raise ConfigError("capture.window_seconds: 측정 주기보다 짧아야 함")
     if cfg.queue_size < 1:
         raise ConfigError("queue_size: 1 이상")
-    if cfg.blur.downscale < 2:
-        raise ConfigError("blur.downscale: 2 이상")
+    if cfg.blur.box_pad < 0:
+        raise ConfigError("blur.box_pad: 0 이상")
+    if cfg.blur.box_long_side < 1:
+        raise ConfigError("blur.box_long_side: 1 이상")
     return cfg
 
 
