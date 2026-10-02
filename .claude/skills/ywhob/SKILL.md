@@ -17,7 +17,7 @@ description: YwHob 혼잡도 파이프라인 작업 절차. 파이프라인 단�
 | `ywhob/detect.py` | 5.2 | 5장 배치 추론, 0번(person)만 남김, person_conf, max_det |
 | `ywhob/matching.py` | 5.3 | (보류) 머리 확인 규칙. 현재 파이프라인에서 쓰지 않음 |
 | `ywhob/aggregate.py` | 5.4~5.6 | 발 위치로 구역 배정, 중앙값, 절대+비율 편차 신뢰도, EMA, 히스테리시스 |
-| `ywhob/blur.py` | 5.7 | 축소 → 블러 → 확대, 해상도·선명도 검증, 실패 시 None |
+| `ywhob/blur.py` | 5.7 | 사람 박스만 축소 → 확대 블러, 박스별 선명도 검증, 실패 시 None |
 | `ywhob/publish.py` | 5.8, 9 | 이미지 먼저 JSON 나중, `?v=` 버전 쿼리, low/error 처리, Redis 장애 무시 |
 | `ywhob/pipeline.py` | 2, 6 | 카메라별 시점 분산, 크기 제한 큐(오래된 것 버림), 처리 시간 경고 |
 
