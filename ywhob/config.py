@@ -167,6 +167,8 @@ def load_service(path: str | Path) -> ServiceConfig:
         raise ConfigError("blur.box_pad: 0 이상")
     if cfg.blur.box_long_side < 1:
         raise ConfigError("blur.box_long_side: 1 이상")
+    if not 0 < cfg.blur.sharpness_ratio < 1:
+        raise ConfigError("blur.sharpness_ratio: 0 < r < 1 (1 이상이면 블러 안 된 박스도 통과)")
     return cfg
 
 

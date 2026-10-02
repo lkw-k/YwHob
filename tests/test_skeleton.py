@@ -62,7 +62,9 @@ def test_cli_check_only():
     main(["--service", str(SERVICE), "--cameras", str(CAMERAS), "--check"])
 
 
-@pytest.mark.parametrize("blur", ["box_pad: -0.1", "box_long_side: 0", "downscale: 8"])
+@pytest.mark.parametrize(
+    "blur", ["box_pad: -0.1", "box_long_side: 0", "sharpness_ratio: 1.0", "sharpness_ratio: 0", "downscale: 8"]
+)
 def test_invalid_blur_config_rejected(tmp_path, blur):
     p = tmp_path / "s.yaml"
     p.write_text(f"blur:\n  {blur}\n", encoding="utf-8")
