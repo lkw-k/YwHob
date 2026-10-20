@@ -63,7 +63,17 @@ def test_cli_check_only():
 
 
 @pytest.mark.parametrize(
-    "blur", ["box_pad: -0.1", "box_long_side: 0", "sharpness_ratio: 1.0", "sharpness_ratio: 0", "downscale: 8"]
+    "capture", ["rtsp_transport: http", "read_timeout: 0", "open_timeout: -1"]
+)
+def test_invalid_capture_config_rejected(tmp_path, capture):
+    p = tmp_path / "s.yaml"
+    p.write_text(f"capture:\n  {capture}\n", encoding="utf-8")
+    with pytest.raises(ConfigError):
+        load_service(p)
+
+
+@pytest.mark.parametrize(
+    "blur",["box_pad: -0.1", "box_long_side: 0", "sharpness_ratio: 1.0", "sharpness_ratio: 0", "downscale: 8"]
 )
 def test_invalid_blur_config_rejected(tmp_path, blur):
     p = tmp_path / "s.yaml"

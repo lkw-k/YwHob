@@ -4,12 +4,15 @@
   끊기면 1초부터 두 배씩 reconnect_max_backoff까지 늘려 가며 재연결
 - capture_burst: window_seconds 동안 frames장을 균등 간격(0, 0.75, ... 3.0초)으로 수집.
   같은 프레임이 두 번 들어가거나 오래된 프레임이 섞이지 않게 한다 (끊긴 스트림이 정상 5장처럼 보이는 것 방지)
+- CCTV RTSP는 rtsp_transport(기본 TCP)로 받고, 연결·수신 타임아웃을 둔다.
+  CCTV나 NVR이 응답 없이 멈춰도 read()가 무한정 걸리지 않고 read_timeout 뒤 재연결한다
 - 원본 프레임은 메모리에만 둔다. 로그에는 URL(RTSP 계정 포함) 대신 카메라 id만 남긴다
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 from typing import Callable
@@ -24,16 +27,26 @@ log = logging.getLogger(__name__)
 _LIVE_SCHEMES = ("rtsp://", "rtsps://", "http://", "https://")
 
 
+def open_video(url: str, cfg: CaptureConfig) -> cv2.VideoCapture:
+    """FFmpeg 백엔드로 연다. RTSP 전송 방식은 FFmpeg 옵션 환경변수로만 줄 수 있어 열기 전에 설정한다."""
+    os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = f"rtsp_transport;{cfg.rtsp_transport}"
+    params = [
+        cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, int(cfg.open_timeout * 1000),
+        cv2.CAP_PROP_READ_TIMEOUT_MSEC, int(cfg.read_timeout * 1000),
+    ]
+    return cv2.VideoCapture(url, cv2.CAP_FFMPEG, params)
+
+
 class CameraStream:
     def __init__(
         self,
         camera: CameraConfig,
         cfg: CaptureConfig,
-        opener: Callable[[str], cv2.VideoCapture] = cv2.VideoCapture,
+        opener: Callable[[str], cv2.VideoCapture] | None = None,
     ):
         self.camera = camera
         self.cfg = cfg
-        self._opener = opener  # 테스트에서 가짜 캡처로 바꿔 끼운다
+        self._opener = opener or (lambda url: open_video(url, cfg))  # 테스트에서 가짜 캡처로 바꿔 끼운다
         self._live = camera.url.lower().startswith(_LIVE_SCHEMES)
         self._lock = threading.Lock()
         self._frame: np.ndarray | None = None

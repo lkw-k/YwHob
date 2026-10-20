@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 
+import cv2
 import numpy as np
 
 from ywhob.capture import CameraStream, capture_burst
@@ -176,6 +177,26 @@ def test_video_file_read_at_source_fps():
 
     seq = _run(stream, go)
     assert 5 <= seq <= 15  # 20fps × 0.5초 ≈ 10장. 제한이 없으면 수천 장
+
+
+def test_real_video_file_with_ffmpeg_opener(tmp_path):
+    # 가짜 없이 OpenCV FFmpeg 백엔드(open_video)로 실제 파일을 읽는다
+    path = tmp_path / "sample.avi"
+    w = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"MJPG"), 20.0, (64, 48))
+    for i in range(60):
+        w.write(np.full((48, 64, 3), i * 4, np.uint8))
+    w.release()
+
+    cfg = CaptureConfig(window_seconds=0.4)
+    stream = CameraStream(_camera(str(path)), cfg)
+
+    def go():
+        _wait_frame(stream)
+        return capture_burst(stream, cfg)
+
+    frames = _run(stream, go)
+    assert len(frames) >= cfg.min_frames
+    assert frames[0].shape == (48, 64, 3)
 
 
 def test_url_not_logged(caplog):

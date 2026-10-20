@@ -32,6 +32,9 @@ class CaptureConfig:
     window_seconds: float = 3.0
     min_frames: int = 3
     reconnect_max_backoff: float = 30.0
+    rtsp_transport: str = "tcp"
+    open_timeout: float = 10.0
+    read_timeout: float = 10.0
 
 
 @dataclass(frozen=True)
@@ -77,6 +80,7 @@ class RedisConfig:
     key_prefix: str = "ywhob"
     image_ttl: int = 120
     image_url_base: str = "/snapshots"
+    socket_timeout: float = 5.0
 
 
 @dataclass(frozen=True)
@@ -161,6 +165,12 @@ def load_service(path: str | Path) -> ServiceConfig:
         raise ConfigError("capture.min_frames: 1 이상, frames 이하")
     if cap.window_seconds >= cfg.cycle_seconds:
         raise ConfigError("capture.window_seconds: 측정 주기보다 짧아야 함")
+    if cap.rtsp_transport not in ("tcp", "udp"):
+        raise ConfigError("capture.rtsp_transport: tcp 또는 udp")
+    if cap.open_timeout <= 0 or cap.read_timeout <= 0:
+        raise ConfigError("capture.open_timeout/read_timeout: 0보다 커야 함")
+    if cfg.redis.socket_timeout <= 0:
+        raise ConfigError("redis.socket_timeout: 0보다 커야 함")
     if cfg.queue_size < 1:
         raise ConfigError("queue_size: 1 이상")
     if cfg.blur.box_pad < 0:
