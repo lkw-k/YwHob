@@ -132,19 +132,22 @@ def test_reconnects_after_disconnect():
 
 
 def test_stalled_stream_does_not_repeat_frame():
-    # 프레임 2장 뒤 멈춘 스트림: 같은 프레임을 5번 넣어 정상처럼 보이면 안 된다
+    # 프레임 2장 뒤 멈춘 스트림: 마지막 프레임을 5번 넣어 정상처럼 보이면 안 된다
     cap = FakeCapture(stall_after=2)
     stream = CameraStream(_camera(), FAST, opener=Opener(cap, FakeCapture(opened=False)))
 
     def go():
-        _wait_frame(stream)
+        end = time.monotonic() + 2
+        while cap.count < 2 and time.monotonic() < end:
+            time.sleep(0.01)
+        time.sleep(0.15)  # 멈춘 뒤 캡처 간격(0.1초)보다 오래 지남
         return capture_burst(stream, FAST)
 
     try:
         frames = _run(stream, go)
     finally:
         cap.unstall.set()
-    assert len(frames) <= 1
+    assert frames == []
 
 
 def test_stale_frame_rejected():
