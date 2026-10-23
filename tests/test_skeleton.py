@@ -62,6 +62,20 @@ def test_cli_check_only():
     main(["--service", str(SERVICE), "--cameras", str(CAMERAS), "--check"])
 
 
+def test_model_alias_resolved():
+    det = load_service(SERVICE).detector
+    assert det.model == "models/yolo26s-ywhob-v1.pt"  # 기본 s
+    assert det.with_model("n").model == "models/yolo26n-ywhob-v1.pt"
+    assert det.with_model("models/other.onnx").model == "models/other.onnx"  # 별칭이 아니면 경로
+
+
+def test_cli_missing_files_exit(tmp_path):
+    with pytest.raises(SystemExit):
+        main(["--service", str(SERVICE), "--cameras", str(tmp_path / "none.yaml")])
+    with pytest.raises(SystemExit):
+        main(["--service", str(SERVICE), "--cameras", str(CAMERAS), "--model", str(tmp_path / "none.pt")])
+
+
 @pytest.mark.parametrize(
     "capture", ["rtsp_transport: http", "read_timeout: 0", "open_timeout: -1"]
 )

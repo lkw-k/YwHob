@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import yaml
@@ -39,11 +39,16 @@ class CaptureConfig:
 
 @dataclass(frozen=True)
 class DetectorConfig:
-    model: str = "models/yolo26s-ywhob.onnx"
+    model: str = "models/yolo26s-ywhob-v1.pt"
     imgsz: int = 1280
     person_conf: float = 0.35
     max_det: int = 1000
     device: str | int | None = None
+    models: dict[str, str] = field(default_factory=dict)  # 별칭 → 가중치 경로 (예: s, n)
+
+    def with_model(self, name: str) -> DetectorConfig:
+        """별칭(models의 키)이나 가중치 경로로 모델을 고른다."""
+        return replace(self, model=self.models.get(name, name))
 
 
 @dataclass(frozen=True)
@@ -149,13 +154,19 @@ def _aggregate(raw: dict) -> AggregateConfig:
     return cfg
 
 
+def _detector(raw: dict | None) -> DetectorConfig:
+    cfg = _build(DetectorConfig, raw, "detector")
+    models = {str(k): str(v) for k, v in (cfg.models or {}).items()}
+    return replace(cfg, models=models).with_model(cfg.model)
+
+
 def load_service(path: str | Path) -> ServiceConfig:
     raw = _read_yaml(path)
     cfg = ServiceConfig(
         cycle_seconds=float(raw.get("cycle_seconds", ServiceConfig.cycle_seconds)),
         queue_size=int(raw.get("queue_size", ServiceConfig.queue_size)),
         capture=_build(CaptureConfig, raw.get("capture"), "capture"),
-        detector=_build(DetectorConfig, raw.get("detector"), "detector"),
+        detector=_detector(raw.get("detector")),
         aggregate=_aggregate(raw.get("aggregate") or {}),
         blur=_build(BlurConfig, raw.get("blur"), "blur"),
         redis=_build(RedisConfig, raw.get("redis"), "redis"),

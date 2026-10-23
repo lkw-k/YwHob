@@ -13,7 +13,10 @@ capture:                     # spec 5.1
   read_timeout: 10           # 프레임 수신 대기(초). CCTV/NVR이 멈추면 이 시간 뒤 재연결 (잠정)
 
 detector:                    # spec 5.2
-  model: models/yolo26s-ywhob.onnx
+  model: s                   # 아래 models의 별칭 또는 가중치 경로. 실행 시 --model n 처럼 바꿀 수 있음
+  models:                    # 파인튜닝 모델 (CrowdHuman, imgsz 1280). 파일은 git 제외, models/README.md 참고
+    s: models/yolo26s-ywhob-v1.pt   # 스몰: 정확도 우선 (기본)
+    n: models/yolo26n-ywhob-v1.pt   # 나노: 속도 우선. GPU가 없거나 카메라가 많을 때
   imgsz: 1280
   person_conf: 0.35          # (잠정)
   max_det: 1000
