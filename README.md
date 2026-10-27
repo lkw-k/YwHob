@@ -16,7 +16,7 @@ CCTV를 주기적으로 캡처해 구역별 혼잡도를 산출하고, 수치와
 | 측정 주기 | 30초 |
 | 샘플링 | 주기당 3초간 5장 |
 | 출력 | 혼잡 3단계 + 연속 점수 + 블러 이미지 |
-| 모델 | YOLO26 Small (`yolo26s`), 파인튜닝 전제 |
+| 모델 | YOLO26 Small (`yolo26s`) 파인튜닝 기본, Nano (`yolo26n`) 선택 가능 |
 
 ## 파이프라인
 
@@ -115,6 +115,48 @@ Redis에 최신 값 덮어쓰기 → 웹 서버가 읽기. 양측 장애 전파 
 | `image_url` | 이미지는 JSON에 인코딩하지 않고 URL만 전달 |
 
 30초 주기이므로 폴링으로 충분. 푸시 필요 시 SSE.
+
+## 실행 방법 (CCTV)
+
+저장소 루트에서 실행한다. Python 3.11, [uv](https://docs.astral.sh/uv/) 필요.
+
+```bash
+# 1. 설치 (추론용 모델 패키지 포함)
+uv sync --extra model
+
+# 2. 카메라 설정: 예시를 복사해 CCTV RTSP 주소, 구역 ROI, capacity를 채운다
+cp configs/cameras.example.yaml configs/cameras.yaml
+uv run python scripts/roi_editor.py        # 현장 프레임 위에 ROI를 그려 YAML로 출력
+
+# 3. 모델 가중치를 models/에 둔다 (git 제외, 아래 표 참고)
+
+# 4. 설정 검증 후 실행. Redis는 configs/service.yaml의 redis.url
+uv run ywhob --check
+uv run ywhob                # 스몰 (기본)
+uv run ywhob --model n      # 나노
+```
+
+### 모델 선택: 스몰 / 나노
+
+둘 다 CrowdHuman으로 파인튜닝했다 (imgsz 1280, 50 에폭). `--model` 없이 실행하면 스몰을 쓴다.
+
+| 별칭 | 파일 | person mAP50 (CrowdHuman val) | 5장 추론 GPU / CPU | 언제 쓰나 |
+|---|---|---|---|---|
+| `s` (기본) | `models/yolo26s-ywhob-v1.pt` | 0.946 | 49ms / 660ms | GPU 노트북. 정확도 우선 |
+| `n` | `models/yolo26n-ywhob-v1.pt` | 0.928 | 29ms / 230ms | GPU가 없거나, 카메라가 많아 30초 안에 추론이 끝나지 않을 때 |
+
+추론 시간은 개발 PC(RTX 4070) 기준, 1920×1080 프레임 5장 한 배치, imgsz 1280. 영상 디코딩 부하는 포함하지 않았다.
+
+- 로그에 `주기 처리 N초 (주기 30초 초과)` 경고가 반복되면 나노로 바꾼다.
+- 다른 가중치는 경로로 줄 수 있다: `uv run ywhob --model models/yolo26s-ywhob-v2.onnx`
+- 별칭과 파일 경로는 `configs/service.yaml`의 `detector.models`에서 바꾼다.
+
+### CCTV 설정 팁
+
+- RTSP는 TCP로 받는다 (`capture.rtsp_transport`). 연결이나 수신이 10초 넘게 멈추면 자동으로 재연결한다.
+- 노트북의 디코딩 부하를 줄이려면 CCTV의 **서브스트림**이나 낮은 fps(예: 5fps)를 쓴다. ROI 좌표는 실제로 받는 스트림 해상도 기준으로 그린다.
+- `configs/cameras.yaml`에는 RTSP 계정이 들어가므로 git에 올리지 않는다. 로그에도 URL 대신 카메라 id만 남긴다.
+- 카메라가 끊기면 해당 구역은 `status: error`로 전송되고, 재연결되면 다음 주기부터 정상으로 돌아온다.
 
 ## 진행 순서
 현재 미정.

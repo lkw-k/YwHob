@@ -10,8 +10,9 @@ YwHob: 박람회 CCTV를 30초마다 캡처해 구역별 혼잡도(3단계 + 연
 
 ## 현재 상태
 
-파이프라인 **뼈대만** 있다. 각 모듈은 인터페이스와 `TODO(구현)` docstring만 있고 본문은 `NotImplementedError`.
-사용자가 요청하기 전에는 로직 구현을 시작하지 않는다.
+capture → detect → aggregate → blur → publish와 pipeline 연결까지 구현돼 있다. `matching.py`(spec 5.3)만 보류라 `NotImplementedError`.
+검출 모델은 파인튜닝한 스몰(`s`, 기본)과 나노(`n`) 중 `--model`로 고른다 (`configs/service.yaml`의 `detector.models`).
+실제 CCTV 연결 확인, ONNX export, 벤치마크(수용 카메라 수)는 아직이다.
 
 ## 환경
 
@@ -22,7 +23,9 @@ YwHob: 박람회 CCTV를 30초마다 캡처해 구역별 혼잡도(3단계 + 연
 uv sync --extra train --group dev   # 전체 설치 (학습 포함)
 uv run pytest -q                    # 테스트
 uv run ywhob --cameras configs/cameras.example.yaml --check   # 설정 검증
-uv run ywhob                        # 서비스 실행 (configs/cameras.yaml 필요)
+uv run ywhob                        # 서비스 실행 (configs/cameras.yaml 필요, 스몰 모델)
+uv run ywhob --model n              # 나노 모델로 실행
+uv run python scripts/roi_editor.py --id cam01 --url <rtsp 주소>   # CCTV 화면에 ROI 그리기
 ```
 
 `uv sync`는 지정하지 않은 extra를 지운다. 학습 패키지를 유지하려면 `--extra train`을 빼먹지 않는다.
