@@ -62,8 +62,32 @@ def test_cli_check_only():
     main(["--service", str(SERVICE), "--cameras", str(CAMERAS), "--check"])
 
 
+def test_model_alias_resolved():
+    det = load_service(SERVICE).detector
+    assert det.model == "models/yolo26s-ywhob-v1.pt"  # 기본 s
+    assert det.with_model("n").model == "models/yolo26n-ywhob-v1.pt"
+    assert det.with_model("models/other.onnx").model == "models/other.onnx"  # 별칭이 아니면 경로
+
+
+def test_cli_missing_files_exit(tmp_path):
+    with pytest.raises(SystemExit):
+        main(["--service", str(SERVICE), "--cameras", str(tmp_path / "none.yaml")])
+    with pytest.raises(SystemExit):
+        main(["--service", str(SERVICE), "--cameras", str(CAMERAS), "--model", str(tmp_path / "none.pt")])
+
+
 @pytest.mark.parametrize(
-    "blur", ["box_pad: -0.1", "box_long_side: 0", "sharpness_ratio: 1.0", "sharpness_ratio: 0", "downscale: 8"]
+    "capture", ["rtsp_transport: http", "read_timeout: 0", "open_timeout: -1"]
+)
+def test_invalid_capture_config_rejected(tmp_path, capture):
+    p = tmp_path / "s.yaml"
+    p.write_text(f"capture:\n  {capture}\n", encoding="utf-8")
+    with pytest.raises(ConfigError):
+        load_service(p)
+
+
+@pytest.mark.parametrize(
+    "blur",["box_pad: -0.1", "box_long_side: 0", "sharpness_ratio: 1.0", "sharpness_ratio: 0", "downscale: 8"]
 )
 def test_invalid_blur_config_rejected(tmp_path, blur):
     p = tmp_path / "s.yaml"

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import yaml
@@ -32,15 +32,23 @@ class CaptureConfig:
     window_seconds: float = 3.0
     min_frames: int = 3
     reconnect_max_backoff: float = 30.0
+    rtsp_transport: str = "tcp"
+    open_timeout: float = 10.0
+    read_timeout: float = 10.0
 
 
 @dataclass(frozen=True)
 class DetectorConfig:
-    model: str = "models/yolo26s-ywhob.onnx"
+    model: str = "models/yolo26s-ywhob-v1.pt"
     imgsz: int = 1280
     person_conf: float = 0.35
     max_det: int = 1000
     device: str | int | None = None
+    models: dict[str, str] = field(default_factory=dict)  # 별칭 → 가중치 경로 (예: s, n)
+
+    def with_model(self, name: str) -> DetectorConfig:
+        """별칭(models의 키)이나 가중치 경로로 모델을 고른다."""
+        return replace(self, model=self.models.get(name, name))
 
 
 @dataclass(frozen=True)
@@ -77,6 +85,7 @@ class RedisConfig:
     key_prefix: str = "ywhob"
     image_ttl: int = 120
     image_url_base: str = "/snapshots"
+    socket_timeout: float = 5.0
 
 
 @dataclass(frozen=True)
@@ -145,13 +154,19 @@ def _aggregate(raw: dict) -> AggregateConfig:
     return cfg
 
 
+def _detector(raw: dict | None) -> DetectorConfig:
+    cfg = _build(DetectorConfig, raw, "detector")
+    models = {str(k): str(v) for k, v in (cfg.models or {}).items()}
+    return replace(cfg, models=models).with_model(cfg.model)
+
+
 def load_service(path: str | Path) -> ServiceConfig:
     raw = _read_yaml(path)
     cfg = ServiceConfig(
         cycle_seconds=float(raw.get("cycle_seconds", ServiceConfig.cycle_seconds)),
         queue_size=int(raw.get("queue_size", ServiceConfig.queue_size)),
         capture=_build(CaptureConfig, raw.get("capture"), "capture"),
-        detector=_build(DetectorConfig, raw.get("detector"), "detector"),
+        detector=_detector(raw.get("detector")),
         aggregate=_aggregate(raw.get("aggregate") or {}),
         blur=_build(BlurConfig, raw.get("blur"), "blur"),
         redis=_build(RedisConfig, raw.get("redis"), "redis"),
@@ -161,6 +176,12 @@ def load_service(path: str | Path) -> ServiceConfig:
         raise ConfigError("capture.min_frames: 1 이상, frames 이하")
     if cap.window_seconds >= cfg.cycle_seconds:
         raise ConfigError("capture.window_seconds: 측정 주기보다 짧아야 함")
+    if cap.rtsp_transport not in ("tcp", "udp"):
+        raise ConfigError("capture.rtsp_transport: tcp 또는 udp")
+    if cap.open_timeout <= 0 or cap.read_timeout <= 0:
+        raise ConfigError("capture.open_timeout/read_timeout: 0보다 커야 함")
+    if cfg.redis.socket_timeout <= 0:
+        raise ConfigError("redis.socket_timeout: 0보다 커야 함")
     if cfg.queue_size < 1:
         raise ConfigError("queue_size: 1 이상")
     if cfg.blur.box_pad < 0:
